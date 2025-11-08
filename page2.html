@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>حاسبة شراكة السيارة — أرباح شهرية متغيّرة</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --ink: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22c55e;
+      --warn: #ef4444;
+    }
+  
+    * { box-sizing: border-box; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial }
+  
+    body { margin: 0; background: linear-gradient(180deg,#0b1220,#0f172a); color: var(--ink) }
+  
+    /* وسّع الحاوية شوية علشان الرسوم تبان */
+    .wrap { max-width: 1280px; margin: 24px auto; padding: 16px }
+  
+    h1 { font-size: 1.4rem; margin: 0 0 16px }
+  
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+  
+    .card { background: var(--card); border: 1px solid #1f2937; border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px #00000040 }
+  
+    label { display: block; font-size: .9rem; color: var(--muted); margin-bottom: 6px }
+  
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 12px;
+      border: 1px solid #374151; background: #0b1220; color: var(--ink)
+    }
+  
+    textarea { min-height: 112px; resize: vertical }
+  
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+  
+    .btns { display: flex; gap: 8px; flex-wrap: wrap }
+  
+    button {
+      padding: 10px 14px; border-radius: 12px; border: 1px solid #334155;
+      background: #0b1220; color: var(--ink); cursor: pointer
+    }
+    button.primary { background: var(--accent); border-color: #16a34a; color: #052e16; font-weight: 700 }
+  
+    .muted { color: var(--muted) }
+  
+    .summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 12px }
+  
+    .pill { background: #0b1220; border: 1px solid #1f2937; border-radius: 14px; padding: 10px; font-size: .95rem }
+    .pill b { display: block; font-size: 1.05rem; margin-top: 2px }
+  
+    table { width: 100%; border-collapse: collapse; font-size: .9rem }
+    thead th { position: sticky; top: 0; background: #0b1220; border-bottom: 1px solid #1f2937 }
+    th, td { padding: 8px 10px; border-bottom: 1px dashed #1f2937; text-align: center; white-space: nowrap }
+  
+    .scroll { max-height: 420px; overflow: auto; border: 1px solid #1f2937; border-radius: 12px }
+  
+    .ok { color: var(--accent) }
+    .warn { color: var(--warn) }
+  
+    .footer { margin-top: 10px; font-size: .85rem; color: var(--muted) }
+  
+    .note { background: #052e16; border: 1px solid #14532d; color: #d1fae5; padding: 10px; border-radius: 10px; margin-top: 10px }
+  
+    .toggle { display: flex; gap: 8px; margin-top: 8px }
+    .toggle>label {
+      display: flex; align-items: center; gap: 6px; background: #0b1220;
+      border: 1px solid #334155; padding: 8px 10px; border-radius: 10px; cursor: pointer
+    }
+    input[type="radio"] { accent-color: #22c55e; transform: scale(1.1) }
+  
+    @media (max-width:900px) {
+      .grid, .row, .summary { grid-template-columns: 1fr }
+    }
+  
+    /* ========= الرسوم البيانية: عرض كامل وواضح ========= */
+    .charts{
+      display: grid;
+      grid-template-columns: 1fr;     /* خليه عمود واحد بعرض كامل */
+      gap: 24px;                      /* مسافة أكبر بين الرسوم */
+    }
+    /* على الشاشات العريضة جدًا ممكن ترجع لأعمدتين لو حابب:
+       @media (min-width:1600px){ .charts{ grid-template-columns: 1fr 1fr } } */
+  
+    canvas{
+      width: 100% !important;         /* املا عرض البطاقة */
+      max-width: 100%;
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+    }
+
+
+
+
+    /* Tabs */
+.tabs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.tab{
+  padding:8px 12px;border-radius:10px;border:1px solid #334155;
+  background:#0b1220;color:#e5e7eb;cursor:pointer
+}
+.tab.active{background:#1f2937;border-color:#475569;font-weight:700}
+.tabpanes{width:100%}
+.pane{display:none}
+.pane.active{display:block}
+
+/* الرسوم تملأ العرض */
+canvas{width:100% !important;max-width:100%}
+
+  </style>
+  
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>(مصطفى)حاسبة شراكة السيارة — تسوية المدفوعات وتوزيع الأرباح (أرباح متغيرة)</h1>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <div>
+            <label>سعر السيارة الإجمالي</label>
+            <input id="total" type="number" step="1" max="1842000" min="1842000" value="1842000" readonly disabled>
+          </div>
+          <div>
+            <label>المدفوع — أنت</label>
+            <input id="youPaid" type="number" step="1" value="1517000" disabled>
+          </div>
+        </div>
+    
+        <div class="row">
+          <div>
+            <label>المدفوع — أحمد</label>
+            <input id="broPaid" type="number" step="1" min="325000" max="325000" readonly value="325000" disabled>
+          </div>
+        
+          <div>
+            <label>نسبة السداد من نصيب أحمد الشهري</label>
+        
+            <style>
+              #repayPctWrapper {
+                display: inline-block;
+                position: relative;
+              }
+        
+              #repayPctWrapper::after {
+                content: "%";
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: white;
+                pointer-events: none;
+              }
+        
+              #repayPct {
+                padding-right: 25px;
+              }
+            </style>
+        
+            <div id="repayPctWrapper">
+              <input id="repayPct" type="number" step="1" min="85" max="100" value="100">
+            </div>
+        
+            <div class="muted" style="margin-top:6px">
+              (% من نصيبه الشهري يُحوَّل لتسديد الفرق لك حتى ينتهي)
+            </div>
+          </div>
+        </div>
+        
+        <script>
+          const repayPct = document.getElementById("repayPct");
+        
+          repayPct.addEventListener("input", () => {
+            let val = parseInt(repayPct.value, 10);
+        
+            // لو فاضي، نسيبه
+            if (isNaN(val)) return;
+        
+            // تصحيح القيم خارج النطاق
+            if (val < 85) repayPct.value = 85;
+            if (val > 100) repayPct.value = 100;
+          });
+        </script>
+        
+        <div class="row">
+          <div>
+            <label>نسبة ملكيتك النهائية</label>
+            <select id="youShare">
+              <option value="0.6666667" selected>⅔ (66.6667%)</option>
+              <option value="0.5">½ (50%)</option>
+              <option value="0.6">3/5 (60%)</option>
+              <option value="custom">مخصّص…</option>
+            </select>
+            <input id="youShareCustom" type="number" min="0" max="1" step="0.0001"
+                   placeholder="أدخل نسبة بين 0 و 1" style="margin-top:6px;display:none">
+          </div>
+          <div>
+            <label>وضع الأرباح</label>
+            <div class="toggle">
+              <label><input type="radio" name="mode" value="fixed" checked> ثابت (قيمة واحدة)</label>
+              <label><input type="radio" name="mode" value="variable"> قائمة أرباح شهرية</label>
+            </div>
+          </div>
+        </div>
+    
+        <div id="fixedBox" class="row" style="margin-top:8px">
+          <div>
+            <label>متوسط الربح الشهري (جنيه) — ثابت</label>
+            <input id="monthlyProfit" type="number" step="1" value="70000">
+          </div>
+          <div>
+            <label>—</label>
+            <input type="text" disabled placeholder="استخدم الوضع المتغير أدناه إن رغبت">
+          </div>
+        </div>
+    
+        <div id="varBox" style="display:none;margin-top:8px">
+          <label>قائمة الأرباح الشهرية (أدخل أرقامًا مفصولة بفواصل أو أسطر)</label>
+          <textarea id="profitsList" placeholder="مثال:
+    65000
+    72000
+    40000, 90000
+    85000
+    ..."></textarea>
+          <div class="muted" style="margin-top:6px">
+            سنستخدم الأرقام بالترتيب. لو انتهت القائمة قبل اكتمال التسوية، سنُكرّر <b>آخر رقم</b> تلقائيًا.
+          </div>
+        </div>
+    
+        <!-- ✅ جديد: دفعات إضافية لأحمد بصيغة شهر:مبلغ -->
+        <div class="row" style="margin-top:8px">
+          <div>
+            <label>دفعات إضافية (أحمد) بصيغة شهر:مبلغ</label>
+            <textarea id="extraPayments" placeholder="مثال:
+    6:150000
+    9:80000, 12:50000"></textarea>
+            <div class="muted" style="margin-top:6px">
+              تُطبَّق الدفعة في بداية الشهر ثم يُعاد احتساب النِّسب لهذا الشهر. اتركه فارغًا إن لم توجد دفعات.
+            </div>
+          </div>
+          <div>
+            <label>التطبيق</label>
+            <input type="text" disabled value="يُخصم أول الشهر قبل توزيع الربح">
+          </div>
+        </div>
+        <!-- نهاية الجديد -->
+    
+        <div class="btns" style="margin-top:12px">
+          <button class="primary" id="calcBtn">احسب الآن</button>
+          <button id="resetBtn">إرجاع القيم الافتراضية</button>
+          <button id="csvBtn">تحميل الجدول CSV</button>
+        </div>
+    
+        <div class="note">
+          ملاحظة: تُحسب التسوية أولًا من نصيب أحمد، وبعد اكتمالها يعود توزيع الربح الطبيعي حسب النِّسب.
+        </div>
+      </div>
+    
+      <div class="card">
+        <div class="summary">
+          <div class="pill">
+            العادل لك (بالقيمة)<b id="youFair">—</b>
+            <span class="muted">= الإجمالي × نسبتك</span>
+          </div>
+          <div class="pill">
+            العادل لأحمد (بالقيمة)<b id="broFair">—</b>
+            <span class="muted">= الإجمالي × نسبته</span>
+          </div>
+          <div class="pill">
+            فرقك (مدفوع زيادة)<b id="youOver" class="ok">—</b>
+            <span class="muted">(+ يعني لك مستحقات)</span>
+          </div>
+          <div class="pill">
+            فرق أحمد (مدفوع أقل)<b id="broUnder" class="warn">—</b>
+            <span class="muted">(+ يعني عليه مستحقات)</span>
+          </div>
+        </div>
+    
+        <div class="summary" style="margin-top:12px">
+          <div class="pill">
+            نصيبك في أول شهر<b id="youNow">—</b>
+            <span class="muted">يتضمّن السداد إن وُجد</span>
+          </div>
+          <div class="pill">
+            نصيب أحمد في أول شهر<b id="broNow">—</b>
+            <span class="muted">بعد خصم السداد</span>
+          </div>
+          <div class="pill">
+            أشهر متوقعة لإتمام التسوية<b id="monthsToSettle">—</b>
+            <span class="muted">تقديري مع الأرباح المُدخلة</span>
+          </div>
+          <div class="pill">
+            المتبقي من التسوية الآن<b id="remain">—</b>
+            <span class="muted">يُحدّث بعد الحساب</span>
+          </div>
+          <div class="pill">
+            إجمالي ما سيدفعه أحمد حتى نهاية التسوية
+            <b id="ahmedTotal">—</b>
+            <span class="muted">= مجموع السداد التراكمي حتى اكتمال التسوية</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+
+    <div class="card" style="margin-top:14px">
+      <h2 style="margin:0 0 10px;font-size:1.1rem">جدول شهري تفصيلي (حتى اكتمال التسوية ثم 12 شهر إضافي)</h2>
+      <div class="scroll">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>الشهر</th>
+              <th>الربح</th>
+              <th>نصيبك الأساسي (أنت)</th>
+              <th>النصيب الأساسي (أحمد)</th>
+              <th>دفعة إضافية (أحمد)</th>
+              <th>المسدّد لك من أحمد</th>
+              <th>إجمالي نصيبك</th>
+              <th>نصيب أحمد بعد السداد</th>
+              <th>المتبقي من التسوية</th>
+              <th>النسبة الفعلية (قبل السداد أنت/أحمد)</th>
+            </tr>
+          </thead>
+          
+          <tbody></tbody>
+        </table>
+
+      </div>
+      <div class="footer">يمكنك لصق قائمة أرباح لأي عدد من الشهور. إذا كان شهر ربحه 0، فلن يكون هناك سداد في هذا الشهر.
+      </div>
+    </div>
+    <!-- أسفل الجدول مثلاً -->
+    <!-- <div class="card" style="margin-top:14px">
+      <h2 style="margin:0 0 10px;font-size:1.1rem">رسوم توضيحية</h2>
+    
+      <div class="charts">
+        <canvas id="ownershipChart" height="420"></canvas>
+        <canvas id="debtChart" height="420"></canvas>
+        <canvas id="flowChart" height="420"></canvas>
+      </div>
+    
+      <div class="btns" style="margin-top:10px">
+        <button id="jsonBtn">تنزيل المصفوفة JSON</button>
+      </div>
+      <div class="footer">
+        1) تطوّر النِّسب الفعلية (قبل السداد) — أنت/أحمد + خطوط مرجعية 66.7%/33.3%.<br>
+        2) المتبقي من التسوية (خط) مع علامات واضحة.<br>
+        3) السداد الشهري (أعمدة) مقابل نصيب أحمد الأساسي (خط).
+      </div>
+    </div> -->
+    
+
+
+    <div class="card" style="margin-top:14px">
+      <h2 style="margin:0 0 10px;font-size:1.1rem">رسوم توضيحية</h2>
+    
+      <div class="tabs">
+        <button class="tab active" data-tab="own">النِّسب الفعلية</button>
+        <button class="tab" data-tab="debt">المتبقي من التسوية</button>
+        <button class="tab" data-tab="flow">السداد الشهري</button>
+      </div>
+    
+      <div class="tabpanes">
+        <div id="pane-own" class="pane active">
+          <canvas id="ownershipChart" height="420"></canvas>
+        </div>
+        <div id="pane-debt" class="pane">
+          <canvas id="debtChart" height="420"></canvas>
+        </div>
+        <div id="pane-flow" class="pane">
+          <canvas id="flowChart" height="420"></canvas>
+        </div>
+      </div>
+    
+      <div class="btns" style="margin-top:10px">
+        <button id="jsonBtn">تنزيل المصفوفة JSON</button>
+      </div>
+      <div class="footer">
+        اختر التاب لعرض الرسم بعرض كامل، وسيُعاد رسمه تلقائيًا مع تغيير الحجم.
+      </div>
+    </div>
+    
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  <script>
+    (function () {
+      const fmt = n => new Intl.NumberFormat('ar-EG').format(Math.round((+n + Number.EPSILON)));
+      const $ = id => document.getElementById(id);
+
+      const total = $("total"), youPaid = $("youPaid"), broPaid = $("broPaid");
+      const monthlyProfit = $("monthlyProfit"), profitsList = $("profitsList");
+      const youShareSel = $("youShare"), youShareCustom = $("youShareCustom");
+      const repayPct = $("repayPct");
+      const youFair = $("youFair"), broFair = $("broFair"), youOver = $("youOver"), broUnder = $("broUnder");
+      const youNow = $("youNow"), broNow = $("broNow"), monthsToSettle = $("monthsToSettle"), remain = $("remain");
+      const tblBody = $("tbl").querySelector("tbody");
+
+      // Toggle fixed vs variable
+      const fixedBox = $("fixedBox"), varBox = $("varBox");
+      document.querySelectorAll('input[name="mode"]').forEach(r => {
+        r.addEventListener("change", () => {
+          const mode = document.querySelector('input[name="mode"]:checked').value;
+          fixedBox.style.display = (mode === "fixed") ? "grid" : "none";
+          varBox.style.display = (mode === "variable") ? "block" : "none";
+        });
+      });
+
+      function getYouShare() {
+        if (youShareSel.value === "custom") {
+          const v = parseFloat(youShareCustom.value);
+          if (isFinite(v) && v > 0 && v < 1) return v;
+          return 2 / 3; // fallback
+        }
+        return parseFloat(youShareSel.value);
+      }
+      youShareSel.addEventListener("change", () => {
+        youShareCustom.style.display = youShareSel.value === "custom" ? "block" : "none";
+      });
+
+      $("resetBtn").addEventListener("click", () => {
+        total.value = 1842000;
+        youPaid.value = 1517000;
+        broPaid.value = 325000;
+        monthlyProfit.value = 70000;
+        profitsList.value = "";
+        youShareSel.value = "0.6666667";
+        youShareCustom.value = "";
+        repayPct.value = 100;
+        tblBody.innerHTML = "";
+        youFair.textContent = broFair.textContent = youOver.textContent = broUnder.textContent =
+          youNow.textContent = broNow.textContent = monthsToSettle.textContent = remain.textContent = "—";
+        fixedBox.style.display = "grid"; varBox.style.display = "none";
+        document.querySelector('input[name="mode"][value="fixed"]').checked = true;
+      });
+
+      function parseProfits() {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        if (mode === "fixed") {
+          const p = +monthlyProfit.value || 0;
+          // سنبدأ بـ 120 شهر كمبدئي (سيتم الاقتصاص عند اكتمال التسوية)
+          return Array(120).fill(p);
+        }
+        // variable
+        const raw = profitsList.value || "";
+        const nums = raw
+          .split(/[\n,;]+/g)
+          .map(s => s.trim())
+          .filter(s => s.length > 0)
+          .map(s => +s)
+          .filter(n => isFinite(n));
+        return nums;
+      }
+
+      function parseExtraPayments() {
+        const raw = (document.getElementById('extraPayments')?.value || "").trim();
+        if (!raw) return {};
+        const map = {};
+        raw.split(/[\n,;]+/g).map(s => s.trim()).forEach(entry => {
+          const m = entry.split(':').map(x => x.trim());
+          if (m.length === 2) {
+            const month = parseInt(m[0], 10);
+            const amount = +m[1];
+            if (Number.isInteger(month) && month > 0 && isFinite(amount) && amount > 0) {
+              map[month] = (map[month] || 0) + amount; // لو اتكرر نفس الشهر نجمعهم
+            }
+          }
+        });
+        return map;
+      }
+
+
+
+      function compute(){
+  const T  = +total.value || 0,
+        YP = +youPaid.value || 0,
+        BP = +broPaid.value || 0;
+
+  const ys_target = getYouShare(), bs_target = 1 - ys_target;
+
+  // الملكية "الابتدائية" حسب المدفوع الفعلي
+  const ys_paid = (T > 0 ? (YP / T) : ys_target);
+  const bs_paid = 1 - ys_paid;
+
+  // الدين الابتدائي (كم لازم يُسدد؟)
+  const fairYou   = T * ys_target,
+        fairBro   = T * bs_target,
+        overYou   = YP - fairYou,     // >0 أنت دفعت زيادة
+        underBro  = fairBro - BP;     // >0 أحمد ناقصه
+  const initialDebt = Math.max(0, Math.min(overYou, underBro));
+  let remaining = initialDebt;
+
+  // تحديث ملخص القيم الثابتة
+  const nf = new Intl.NumberFormat('ar-EG');
+  youFair.textContent  = nf.format(Math.round(fairYou)) + " ج";
+  broFair.textContent  = nf.format(Math.round(fairBro)) + " ج";
+  youOver.textContent  = (overYou>=0?"+":"") + nf.format(Math.round(overYou)) + " ج";
+  broUnder.textContent = (underBro>=0?"+":"") + nf.format(Math.round(underBro)) + " ج";
+
+  const repayRatio = Math.min(100, Math.max(0, +repayPct.value || 0)) / 100;
+
+  // أرباح (ثابت/متغيّر) + دفعات إضافية
+  let profits = parseProfits();
+  const extraMap = parseExtraPayments();
+  if (profits.length === 0) profits = [0];
+
+  const fmt = n => nf.format(Math.round((+n + Number.EPSILON)));
+  const tblBody = document.getElementById("tbl").querySelector("tbody");
+  tblBody.innerHTML = "";
+
+  let month = 0;
+  const rows = [];
+  const MAX_AFTER = 12, MAX_SAFE = 3600;
+
+  function profitAt(i){
+    if (i-1 < profits.length) return profits[i-1];
+    return profits[profits.length-1];
+  }
+
+  // النِّسب الفعلية لهذا الشهر كاستيفاء بين (paid) و(target) بناءً على المتبقي
+  function currentShares(rem){
+    if (initialDebt <= 0) return { ys: ys_target, bs: bs_target };
+    const f = Math.min(1, Math.max(0, rem / initialDebt)); // 1 عند البداية → 0 عند نهاية الدين
+    const ys_now = ys_target + (ys_paid - ys_target) * f;
+    const bs_now = 1 - ys_now;
+    return { ys: ys_now, bs: bs_now };
+  }
+
+  while ( ((remaining > 0) && month < MAX_SAFE) ||
+          ((remaining <= 0) && rows.filter(r => r.after).length < MAX_AFTER) ) {
+
+    month++;
+
+    // ➊ دفعة إضافية أول الشهر (إن وُجدت)
+    const extraPay = Math.min(remaining, Math.max(0, extraMap[month] || 0));
+    remaining = Math.max(0, remaining - extraPay);
+
+    const P = profitAt(month);
+
+    // ➋ النِّسب الفعلية بعد خصم الدفعة الإضافية
+    const { ys: ys_eff, bs: bs_eff } = currentShares(remaining);
+
+    const baseYou = P * ys_eff;
+    const baseBro = P * bs_eff;
+
+    // ➌ السداد من نصيب أحمد الفعلي هذا الشهر
+    const maxRepayThisMonth = Math.max(0, baseBro) * repayRatio;
+    const repayFromBro = remaining > 0 ? Math.min(remaining, maxRepayThisMonth) : 0;
+
+    const youTake = baseYou + repayFromBro;
+    const broTake = baseBro - repayFromBro;
+
+    remaining = Math.max(0, remaining - repayFromBro);
+
+    // النسبة الفعلية قبل السداد (ملكية الشهر)
+    const totalBase = baseYou + baseBro;
+    const youPct = totalBase > 0 ? (baseYou / totalBase * 100).toFixed(1) : "0.0";
+    const broPct = totalBase > 0 ? (baseBro / totalBase * 100).toFixed(1) : "0.0";
+
+    rows.push({
+      m: month,
+      profit: P,
+      ys_eff, bs_eff,
+      baseYou, baseBro,
+      prepay: extraPay,      // الدفعة الإضافية
+      repay: repayFromBro,   // السداد الجاري
+      you: youTake,
+      bro: broTake,
+      remain: remaining,
+      youPct, broPct,
+      after: remaining === 0
+    });
+
+    if (remaining === 0 && rows.filter(r=>r.after).length >= MAX_AFTER) break;
+    if (P <= 0 && remaining > 0 && maxRepayThisMonth <= 0 && month > profits.length + 24) break;
+  }
+
+  // ملخص الشهر الأول
+  const y0 = rows[0]?.you ?? 0;
+  const b0 = rows[0]?.bro ?? 0;
+  youNow.textContent = fmt(y0) + " ج";
+  broNow.textContent = fmt(b0) + " ج";
+
+  // مدة التسوية الفعلية (يشمل شهر الوصول للصفر)
+  const firstZeroIdx = rows.findIndex(r => r.remain === 0);
+  const monthsActual = firstZeroIdx >= 0 ? firstZeroIdx + 1 : rows.length;
+
+  // إجمالي ما سيدفعه أحمد حتى اكتمال التسوية = السداد الجاري + الدفعات الإضافية
+  const totalRepaidToSettle = rows
+    .slice(0, monthsActual)
+    .reduce((s, r) => s + (r.repay || 0) + (r.prepay || 0), 0);
+
+  // تحديث عناصر الملخص
+  monthsToSettle.textContent = (initialDebt === 0) ? "0" : (firstZeroIdx >= 0 ? String(monthsActual) : "—");
+  remain.textContent = fmt(remaining) + " ج";
+  document.getElementById('ahmedTotal').textContent = fmt(totalRepaidToSettle) + " ج";
+
+  // رسم الجدول (لاحظ عمود الدفعة الإضافية قبل المسدَّد)
+  tblBody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.m}</td>
+      <td>${fmt(r.profit)}</td>
+      <td>${fmt(r.baseYou)}</td>
+      <td>${fmt(r.baseBro)}</td>
+      <td class="${r.prepay > 0 ? 'ok' : ''}">${r.prepay > 0 ? fmt(r.prepay) : "—"}</td>
+      <td class="${r.repay  > 0 ? 'ok' : ''}">${r.repay  > 0 ? fmt(r.repay)  : "—"}</td>
+      <td><b>${fmt(r.you)}</b></td>
+      <td>${fmt(r.bro)}</td>
+      <td class="${r.remain === 0 ? 'ok' : 'warn'}">${r.remain === 0 ? "اكتملت ✅" : fmt(r.remain)}</td>
+      <td>${r.youPct}% / ${r.broPct}%</td>
+    </tr>
+  `).join("");
+
+  // ارسم فقط التاب الظاهر لتفادي clientWidth=0 أثناء display:none
+  const activePane = document.querySelector('.tabpanes .pane.active');
+  if      (activePane && activePane.id === 'pane-own')  renderOwnershipChart(rows);
+  else if (activePane && activePane.id === 'pane-debt') renderDebtChart(rows);
+  else                                                  renderFlowChart(rows);
+
+  // خزّن آخر نتائج للرسم وإعادة الرندرة عند تغيير الحجم
+  window.__lastRows = rows;
+  if(!window.__resizeBound){
+    window.addEventListener('resize', ()=>{
+      const pane = document.querySelector('.tabpanes .pane.active');
+      if(window.__lastRows && pane){
+        if      (pane.id==='pane-own')  renderOwnershipChart(window.__lastRows);
+        else if (pane.id==='pane-debt') renderDebtChart(window.__lastRows);
+        else                            renderFlowChart(window.__lastRows);
+      }
+    });
+    window.__resizeBound = true;
+  }
+
+  // زر تنزيل JSON (مرّة واحدة)
+  if (!window.__jsonBound) {
+    document.getElementById('jsonBtn').addEventListener('click', () => downloadRowsAsJSON(rows));
+    window.__jsonBound = true;
+  }
+
+  return { rows };
+}
+
+
+      function initTabs(){
+  if(window.__tabsInit) return;
+  const tabs = document.querySelectorAll('.tabs .tab');
+  tabs.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.dataset.tab;
+      // فعل الحالة النشطة
+      document.querySelectorAll('.tabs .tab').forEach(b=>b.classList.toggle('active', b===btn));
+      document.querySelectorAll('.tabpanes .pane').forEach(p=>p.classList.toggle('active', p.id === 'pane-'+key));
+      // أعد الرسم للتاب المفتوح فقط
+      if(window.__lastRows){
+        if(key==='own')      renderOwnershipChart(window.__lastRows);
+        else if(key==='debt')renderDebtChart(window.__lastRows);
+        else                 renderFlowChart(window.__lastRows);
+      }
+    });
+  });
+  window.__tabsInit = true;
+}
+
+
+
+      function drawLineChart(canvasId, series, options){
+  const c = document.getElementById(canvasId);
+  const ctx = c.getContext('2d');
+
+  // === High-DPI scaling لحدة عالية ===
+  const DPR = Math.max(1, window.devicePixelRatio || 1);
+  const cssW = c.clientWidth || 900;
+  const cssH = c.height;         // ارتفاع من الـattribute بالـCSS px
+  c.width  = Math.floor(cssW * DPR);
+  c.height = Math.floor(cssH * DPR);
+  ctx.scale(DPR, DPR);
+
+  // مساحات داخلية واسعة
+  const padL = 68, padR = 28, padT = 40, padB = 46;
+  const W = cssW, H = cssH;
+  const left = padL, right = W - padR, top = padT, bottom = H - padB;
+  const w = right - left, h = bottom - top;
+
+  // نطاق القيم
+  let minY = +Infinity, maxY = -Infinity, maxLen = 0;
+  series.forEach(s=>{
+    maxLen = Math.max(maxLen, s.data.length);
+    s.data.forEach(v=>{
+      if(v==null) return;
+      minY = Math.min(minY, v);
+      maxY = Math.max(maxY, v);
+    });
+  });
+  if(options && options.yMin!=null) minY = options.yMin;
+  if(options && options.yMax!=null) maxY = options.yMax;
+  if(!isFinite(minY) || !isFinite(maxY) || maxY===minY){ minY = 0; maxY = 1; }
+
+  // فورمات الأرقام
+  const nf = (v)=> options && options.formatY ? options.formatY(v) : (''+Math.round(v));
+
+  // عنوان
+  ctx.clearRect(0,0,W,H);
+  if(options && options.title){
+    ctx.fillStyle = '#e5e7eb';
+    ctx.font = '600 15px system-ui';
+    ctx.fillText(options.title, left, top-12);
+  }
+
+  // محاور + شبكة
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(left, bottom); ctx.lineTo(right, bottom); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, bottom); ctx.stroke();
+
+  ctx.font = '12px system-ui'; ctx.fillStyle = '#9ca3af';
+  const yTicks = 6;
+  for(let i=0;i<=yTicks;i++){
+    const t = i/yTicks;
+    const y = bottom - t*h;
+    const val = minY + t*(maxY-minY);
+    ctx.strokeStyle = '#1f2937';
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+    ctx.fillText(nf(val), 8, y+4);
+  }
+
+  // علامات X (شهور)
+  const step = Math.max(1, Math.floor(maxLen / 10));
+  for(let i=0;i<maxLen;i+=step){
+    const x = left + (i/(Math.max(1,maxLen-1))) * w;
+    ctx.fillText((i+1).toString(), x-6, bottom+16);
+    ctx.strokeStyle = '#1f2937';
+    ctx.beginPath(); ctx.moveTo(x, bottom); ctx.lineTo(x, bottom-4); ctx.stroke();
+  }
+  const xEnd = left + ((maxLen-1)/(Math.max(1,maxLen-1))) * w;
+  ctx.fillText(maxLen.toString(), xEnd-6, bottom+16);
+
+  // ألوان
+  const palette = ['#22c55e','#60a5fa','#f59e0b','#ef4444','#a78bfa'];
+
+  // خطوط مرجعية اختيارية (مثلاً للنِّسب 66.7% و 33.3%)
+  if(options && options.guides){
+    options.guides.forEach(g=>{
+      const y = bottom - ((g - minY)/(maxY - minY)) * h;
+      ctx.setLineDash([6,6]);
+      ctx.strokeStyle = '#475569';
+      ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '11px system-ui';
+      ctx.fillText(g.toFixed ? g.toFixed(1) : g, right-60, y-6);
+    });
+  }
+
+  // السلاسل
+  series.forEach((s, idx)=>{
+    const color = s.color || palette[idx % palette.length];
+    ctx.lineWidth = 2.5; ctx.strokeStyle = color;
+    ctx.beginPath();
+    s.data.forEach((v,i)=>{
+      const x = left + (i/(Math.max(1,maxLen-1))) * w;
+      const y = bottom - ((v - minY)/(maxY - minY)) * h;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // نقاط + تسميات (كل 2 شهر وآخر نقطة)
+    ctx.fillStyle = color;
+    s.data.forEach((v,i)=>{
+      const x = left + (i/(Math.max(1,maxLen-1))) * w;
+      const y = bottom - ((v - minY)/(maxY - minY)) * h;
+      ctx.beginPath(); ctx.arc(x,y,3.2,0,Math.PI*2); ctx.fill();
+      if(i%2===0 || i===s.data.length-1){
+        const label = nf(v);
+        ctx.fillStyle = '#e5e7eb';
+        ctx.font = '11px system-ui';
+        ctx.fillText(label, x+6, y-6);
+        ctx.fillStyle = color;
+      }
+    });
+
+    // ليجند
+    ctx.fillStyle = color;
+    ctx.fillRect(right-200, top+6+18*idx, 10, 10);
+    ctx.fillStyle = '#e5e7eb';
+    ctx.font = '12px system-ui';
+    ctx.fillText(s.name || ('Series '+(idx+1)), right-184, top+15+18*idx);
+  });
+}
+
+      // حضّر بيانات من rows للرسم
+      function prepareChartData(rows) {
+        const months = rows.map(r => r.m);
+        const youPct = rows.map(r => parseFloat(r.youPct)); // %
+        const broPct = rows.map(r => parseFloat(r.broPct)); // %
+        const remain = rows.map(r => r.remain);            // جنيه
+
+        return { months, youPct, broPct, remain };
+      }
+
+      function renderOwnershipChart(rows){
+  const youPct = rows.map(r=> parseFloat(r.youPct));
+  const broPct = rows.map(r=> parseFloat(r.broPct));
+  drawLineChart('ownershipChart', [
+    { name: 'نسبة أنت الفعلية %', data: youPct },
+    { name: 'نسبة أحمد الفعلية %', data: broPct }
+  ], {
+    title: 'تطور النِّسب الفعلية (قبل السداد) — شهريًا',
+    yMin: 0, yMax: 100,
+    formatY: v => Math.round(v) + '%',
+    guides: [66.7, 33.3]    // خطوط مرجعية للهدف النهائي
+  });
+}
+
+function renderDebtChart(rows){
+  const remain = rows.map(r=> r.remain);
+  const fmt = (v)=> new Intl.NumberFormat('ar-EG').format(Math.max(0, Math.round(v)));
+  drawLineChart('debtChart', [
+    { name: 'المتبقي من التسوية (جنيه)', data: remain }
+  ], {
+    title: 'المتبقي من التسوية عبر الشهور',
+    yMin: 0,
+    formatY: fmt
+  });
+}
+
+function renderFlowChart(rows){
+  const repay = rows.map(r=> r.repay);       // أعمدة
+  const baseBro = rows.map(r=> r.baseBro);   // خط
+  drawComboBarsAndLine('flowChart', repay, baseBro, {
+    title: 'السداد الشهري (أعمدة) مقابل النصيب الأساسي لأحمد (خط)'
+  });
+}
+
+
+      // تنزيل المصفوفة JSON
+      function downloadRowsAsJSON(rows) {
+        const json = JSON.stringify(rows, null, 2);
+        const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'car-partnership-matrix.json';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+
+
+
+
+
+      function drawComboBarsAndLine(canvasId, bars, line, options){
+  const c = document.getElementById(canvasId);
+  const ctx = c.getContext('2d');
+
+  const DPR = Math.max(1, window.devicePixelRatio || 1);
+  const cssW = c.clientWidth || 900;
+  const cssH = c.height;
+  c.width = Math.floor(cssW*DPR);
+  c.height = Math.floor(cssH*DPR);
+  ctx.scale(DPR, DPR);
+
+  const padL=68,padR=28,padT=40,padB=46;
+  const W=cssW,H=cssH,left=padL,right=W-padR,top=padT,bottom=H-padB,w=right-left,h=bottom-top;
+
+  // نطاق
+  const maxLen=Math.max(bars.length,line.length);
+  let minY=0,maxY=1;
+  const all = bars.concat(line);
+  maxY = Math.max(1, Math.max(...all));
+
+  // عنوان
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#e5e7eb'; ctx.font='600 15px system-ui';
+  ctx.fillText(options && options.title ? options.title : 'السداد الشهري مقابل نصيب أحمد', left, top-12);
+
+  // محاور + شبكة
+  ctx.strokeStyle='#334155'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(left,bottom); ctx.lineTo(right,bottom); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(left,top); ctx.lineTo(left,bottom); ctx.stroke();
+
+  ctx.font='12px system-ui'; ctx.fillStyle='#9ca3af';
+  const yTicks=6, fmtY=(v)=> new Intl.NumberFormat('ar-EG').format(Math.round(v));
+  for(let i=0;i<=yTicks;i++){
+    const t=i/yTicks, y=bottom - t*h, val=minY + t*(maxY-minY);
+    ctx.strokeStyle='#1f2937'; ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(right,y); ctx.stroke();
+    ctx.fillText(fmtY(val),8,y+4);
+  }
+
+  // X
+  const step=Math.max(1,Math.floor(maxLen/10));
+  for(let i=0;i<maxLen;i+=step){
+    const x=left + (i/(Math.max(1,maxLen-1)))*w;
+    ctx.fillText((i+1).toString(),x-6,bottom+16);
+    ctx.strokeStyle='#1f2937'; ctx.beginPath(); ctx.moveTo(x,bottom); ctx.lineTo(x,bottom-4); ctx.stroke();
+  }
+  const xEnd=left + ((maxLen-1)/(Math.max(1,maxLen-1)))*w;
+  ctx.fillText(maxLen.toString(),xEnd-6,bottom+16);
+
+  // Bars (repay)
+  const barColor='#22c55e', lineColor='#60a5fa';
+  const barW = Math.max(4, w/Math.max(12,maxLen)*0.6);
+  bars.forEach((v,i)=>{
+    const x = left + (i/(Math.max(1,maxLen-1)))*w - barW/2;
+    const y = bottom - ((v-minY)/(maxY-minY))*h;
+    ctx.fillStyle=barColor;
+    ctx.fillRect(x,y,barW,bottom-y);
+  });
+
+  // Line (Ahmed base share)
+  ctx.strokeStyle=lineColor; ctx.lineWidth=2.5; ctx.beginPath();
+  line.forEach((v,i)=>{
+    const x = left + (i/(Math.max(1,maxLen-1)))*w;
+    const y = bottom - ((v-minY)/(maxY-minY))*h;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Legend
+  ctx.fillStyle=barColor; ctx.fillRect(right-260, top+6,10,10);
+  ctx.fillStyle='#e5e7eb'; ctx.fillText('السداد الشهري (من أحمد)', right-244, top+15);
+  ctx.fillStyle=lineColor; ctx.fillRect(right-260, top+24,10,10);
+  ctx.fillStyle='#e5e7eb'; ctx.fillText('النصيب الأساسي لأحمد', right-244, top+33);
+}
+
+
+
+
+
+      $("calcBtn").addEventListener("click", compute);
+
+      // CSV export
+      $("csvBtn").addEventListener("click", () => {
+        const { rows } = compute();
+        if (!rows.length) { alert("من فضلك احسب أولًا."); return; }
+        const header = ["Month", "Profit", "Base_You", "Base_Ahmed", "Repaid_to_You", "You_Take", "Ahmed_Take", "Remaining"];
+        const csv = [header.join(",")].concat(rows.map(r => [
+          r.m, r.profit, r.baseYou, r.baseBro, r.repay, r.you, r.bro, r.remain
+        ].join(","))).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "car-partnership-schedule-variable.csv";
+        document.body.appendChild(a); a.click(); a.remove();
+      });
+
+      // احسب تلقائيًا عند الفتح بالقيم الافتراضية
+      compute();
+      initTabs();
+
+    })();
+
+
+
+
+
+
+
+
+
+
+    
+  </script>
+</body>
+
+</html>

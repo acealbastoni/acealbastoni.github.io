@@ -1,552 +1,332 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Control Panel</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>الصفحة الرئيسية — SPA هرمية + تحديث فوري</title>
+  <style>
+    :root {
+      --primary-bg: #0f1419;
+      --secondary-bg: #141a22;
+      --card-bg: #1b2230;
+      --border: #273040;
+      --ink: #e7eef7;
+      --muted: #9aa7b4;
+      --accent: #22c55e;
+      --accent-2: #4098e6;
+      --hover: #243042;
+      --header-h: 100px;
+      --gap: 10px;
+      --sidebar-w: 200px;          /* العرض الطبيعي */
+      --sidebar-collapsed-w: 64px; /* العرض المصغّر بالأيقونات فقط */
+      --mask-w: 15px;              /* عرض قناع إخفاء السّكروول */
+    }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--primary-bg); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; overflow: hidden; }
 
-        /* Container */
-        .dashboard-container {
-            display: flex;
-            height: 100vh;
-        }
+    /* ===== Header ===== */
+    .header { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--secondary-bg), var(--card-bg)); border-bottom: 1px solid var(--border); padding: 10px 16px; box-shadow: 0 6px 18px #0006; position: sticky; top: 0; z-index: 30; }
+    .toggle { appearance: none; background: var(--secondary-bg); color: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; cursor: pointer; font-weight: 700; transition: background .2s ease; }
+    .toggle:hover { background: var(--hover); }
+    .header-title { text-align: center; flex: 1; }
+    .header-title h1 { margin: 0; color: var(--accent); font-size: 22px; }
+    .header-title p { margin: 0; color: var(--muted); font-size: 13px; }
+    .mini-status { color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; }
 
-        /* Sidebar */
-        .sidebar {
-            width: 280px;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 1000;
-        }
+    /* ===== Layout ===== */
+    .wrap { width: 100%; padding: var(--gap); position: relative; }
+    .main { display: grid; grid-template-columns: var(--sidebar-w) 1fr; gap: var(--gap); height: calc(100vh - var(--header-h)); transition: grid-template-columns .25s ease; }
+    body.sidebar-collapsed .main { grid-template-columns: var(--sidebar-collapsed-w) 1fr; }
 
-        .sidebar.collapsed {
-            width: 80px;
-        }
+    /* ===== Sidebar ===== */
+    .sidebar { background: var(--secondary-bg); border: 1px solid var(--border); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .sidebar .title-sb { display: flex; align-items: center; gap: 8px; color: var(--muted); font-weight: 700; margin: 4px 6px 8px; }
+    .tabs { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
 
-        /* Logo Section */
-        .sidebar-header {
-            padding: 30px 20px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.05);
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        }
+    .tab { display:flex; align-items:center; gap:10px; appearance: none; border: 1px solid var(--border); background: transparent; color: var(--ink); padding: 9px 10px; border-radius: 10px; cursor: pointer; font-weight: 600; text-align: left; transition: .18s; font-size: 13px; width:100%; }
+    .tab:hover { background: var(--hover); }
+    .tab.active { background: var(--accent-2); border-color: #2b6cb0; color: #071018; }
+    .ico { width:24px; text-align:center; font-size:18px; opacity:.9 }
+    .lbl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    body.sidebar-collapsed .sidebar .title-sb span.txt { display:none; }
+    body.sidebar-collapsed .tab { padding:10px 6px; justify-content:center; }
+    body.sidebar-collapsed .tab .lbl { display:none; }
 
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 5px;
-            transition: all 0.3s ease;
-        }
+    /* مجموعات الأب + القوائم الفرعية */
+    .group { display:block; }
+    .tab.parent { justify-content:space-between; }
+    .tab.parent .chev { margin-inline-start:auto; opacity:.8; transition:.2s; }
+    .submenu { display:none; padding-inline-start: 8px; margin-top:6px; }
+    .submenu.open { display:block; animation: drop .18s ease; }
+    @keyframes drop{ from{ opacity:0; transform:translateY(-4px) } to{ opacity:1; transform:none } }
+    body.sidebar-collapsed .submenu { display:none !important; }
 
-        .sidebar.collapsed .logo {
-            font-size: 20px;
-        }
+    /* ===== Content ===== */
+    .contentWrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; min-width: 0; min-height: 0; display: flex; }
+    .frame { flex: 1; padding: var(--gap); }
+    .frame-inner { position:relative; border: none; border-radius: 12px; height: 100%; overflow: hidden; background: #0b1220; }
 
-        .logo-subtitle {
-            color: #a0a0a0;
-            font-size: 12px;
-            transition: all 0.3s ease;
-        }
+    iframe { display: block; width: 100%; height: calc(100vh - var(--header-h) - (var(--gap) * 2)); border: none; border-radius: 12px; overflow: auto; }
+    iframe::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
 
-        .sidebar.collapsed .logo-subtitle {
-            display: none;
-        }
-
-        /* Toggle Button */
-        .toggle-btn {
-            position: absolute;
-            top: 20px;
-            right: -15px;
-            width: 30px;
-            height: 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .toggle-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
-        }
-
-        /* Navigation */
-        .nav-menu {
-            padding: 20px 0;
-            list-style: none;
-        }
-
-        .nav-item {
-            margin: 5px 0;
-            transition: all 0.3s ease;
-        }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: #e0e0e0;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .nav-link::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 4px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transform: scaleY(0);
-            transition: transform 0.3s ease;
-        }
-
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            padding-left: 30px;
-        }
-
-        .nav-link:hover::before {
-            transform: scaleY(1);
-        }
-
-        .nav-link.active {
-            background: linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, transparent 100%);
-            color: #ffffff;
-            font-weight: bold;
-        }
-
-        .nav-link.active::before {
-            transform: scaleY(1);
-        }
-
-        .nav-icon {
-            font-size: 24px;
-            margin-right: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar.collapsed .nav-icon {
-            margin-right: 0;
-            font-size: 28px;
-        }
-
-        .nav-text {
-            flex: 1;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar.collapsed .nav-text {
-            display: none;
-        }
-
-        .nav-badge {
-            background: #e74c3c;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .sidebar.collapsed .nav-badge {
-            display: none;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            background: rgba(255, 255, 255, 0.95);
-            margin: 20px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Header */
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .page-title {
-            font-size: 32px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        /* iframe Container */
-        .iframe-container {
-            width: 100%;
-            height: calc(100vh - 200px);
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            background: white;
-            overflow: hidden;
-        }
-
-        .content-frame {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        /* Loading Animation */
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 50px;
-            color: #667eea;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Welcome Screen */
-        .welcome-screen {
-            text-align: center;
-            padding: 100px 20px;
-        }
-
-        .welcome-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-
-        .welcome-title {
-            font-size: 36px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-        }
-
-        .welcome-text {
-            color: #666;
-            font-size: 18px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                height: 100vh;
-                z-index: 2000;
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
-
-            .sidebar.collapsed {
-                width: 280px;
-            }
-
-            .main-content {
-                margin: 10px;
-                padding: 20px;
-            }
-
-            .toggle-btn {
-                display: block;
-            }
-        }
-
-        /* Tooltip for collapsed sidebar */
-        .nav-link {
-            position: relative;
-        }
-
-        .sidebar.collapsed .nav-link:hover::after {
-            content: attr(data-title);
-            position: absolute;
-            left: 70px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #333;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            white-space: nowrap;
-            font-size: 14px;
-            z-index: 1000;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        }
-    </style>
+    .mask { position:absolute; top:0; bottom:0; width:var(--mask-w); background: var(--card-bg); pointer-events:none; z-index:5; }
+    .mask.left  { left:0; border-top-left-radius:12px; border-bottom-left-radius:12px; }
+    .mask.right { right:0; border-top-right-radius:12px; border-bottom-right-radius:12px; }
+  </style>
 </head>
-<body>
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <button class="toggle-btn" id="toggleBtn" onclick="toggleSidebar()">
-                ☰
-            </button>
-
-            <div class="sidebar-header">
-                <div class="logo">Dashboard</div>
-                <div class="logo-subtitle">Control Panel</div>
-            </div>
-
-            <nav>
-                <ul class="nav-menu">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link active" data-title="Home" onclick="loadPage('home')">
-                            <span class="nav-icon">🏠</span>
-                            <span class="nav-text">Home</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-title="Jobs" onclick="loadPage('jobs')">
-                            <span class="nav-icon">💼</span>
-                            <span class="nav-text">Jobs</span>
-                            <span class="nav-badge">12</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-title="Data" onclick="loadPage('data')">
-                            <span class="nav-icon">📊</span>
-                            <span class="nav-text">Data</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-title="Reports" onclick="loadPage('reports')">
-                            <span class="nav-icon">📈</span>
-                            <span class="nav-text">Reports</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-title="Scripts" onclick="loadPage('scripts')">
-                            <span class="nav-icon">⚙️</span>
-                            <span class="nav-text">Scripts</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-title="Settings" onclick="loadPage('settings')">
-                            <span class="nav-icon">⚙️</span>
-                            <span class="nav-text">Settings</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-title="Profile" onclick="loadPage('profile')">
-                            <span class="nav-icon">👤</span>
-                            <span class="nav-text">Profile</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-title="Help" onclick="loadPage('help')">
-                            <span class="nav-icon">❓</span>
-                            <span class="nav-text">Help</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-header">
-                <h1 class="page-title" id="pageTitle">Home</h1>
-                <div class="user-info">
-                    <div class="user-avatar">AB</div>
-                    <span class="user-name">AceAlBastoni</span>
-                </div>
-            </div>
-
-            <!-- Loading -->
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Loading...</p>
-            </div>
-
-            <!-- Welcome Screen -->
-            <div class="welcome-screen" id="welcomeScreen">
-                <div class="welcome-icon">🚀</div>
-                <h2 class="welcome-title">Welcome to Dashboard</h2>
-                <p class="welcome-text">
-                    Select a section from the sidebar to get started
-                </p>
-            </div>
-
-            <!-- iframe Container -->
-            <div class="iframe-container" id="iframeContainer" style="display: none;">
-                <iframe id="contentFrame" class="content-frame" src=""></iframe>
-            </div>
-        </main>
+<body class="sidebar-collapsed">
+  <div class="header" id="header">
+    <button class="toggle" id="toggleBtn" title="القائمة">☰</button>
+    <div class="header-title">
+      <h1>🏠 الصفحة الرئيسية</h1>
+      <p>شريط يسار هرمي + تحديث فوري بدون إعادة تحميل</p>
     </div>
+    <div class="mini-status">الحالة: <span id="status">جاهز</span> • المسار: <span id="path">#/page2</span></div>
+  </div>
 
-    <script>
-        // Toggle Sidebar
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('collapsed');
-        }
+  <div class="wrap">
+    <div class="main">
+      <aside class="sidebar" id="sidebar">
+        <div class="title-sb"><span class="ico">📂</span><span class="txt">القائمة</span></div>
+        <div class="tabs" id="tabs"><!-- يُبنى تلقائيًا --></div>
+      </aside>
 
-        // Load Page
-        function loadPage(page) {
-            // Update active link
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-            });
-            event.target.closest('.nav-link').classList.add('active');
+      <main class="contentWrap">
+        <div class="frame">
+          <div class="frame-inner">
+            <div class="mask left"></div>
+            <div class="mask right"></div>
+            <iframe id="viewer" title="Viewer"></iframe>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
 
-            // Hide welcome screen
-            document.getElementById('welcomeScreen').style.display = 'none';
+  <script>
+    /* =====================
+       مصادر أساسية ثابتة
+    ===================== */
+    const BASE_ROOT_ITEMS = [
+      { id:'home',     type:'page', inline:true,            label:'الصفحة التعريفية', icon:'🏠' },
+      { id:'page1',    type:'page', file:'page1.html',      label:'مدير الأكواد SQL', icon:'🧮' },
+      { id:'page2',    type:'page', file:'page2.html',      label:'(مصطفى) شراكة السيارة',   icon:'📊' },
+      { id:'settings', type:'page', file:'settings.html',   label:'الإعدادات',        icon:'⚙️' }
+    ];
 
-            // Show loading
-            const loading = document.getElementById('loading');
-            loading.classList.add('active');
+    /* تحميل/حفظ الشجرة الهرمية القادمة من settings.html */
+    const TREE_KEY = 'customMenuTree';
+  function getCustomTree(){ try{ return JSON.parse(localStorage.getItem(TREE_KEY)||'[]'); }catch{ return []; } }
+  function setCustomTree(tree){ localStorage.setItem(TREE_KEY, JSON.stringify(tree||[])); }
 
-            // Page titles
-            const pageTitles = {
-                'home': 'Home',
-                'jobs': 'Jobs',
-                'data': 'Data',
-                'reports': 'Reports',
-                'scripts': 'Scripts',
-                'settings': 'Settings',
-                'profile': 'Profile',
-                'help': 'Help'
-            };
+  /* دعم الإصدارة القديمة (settings القديمة): customPages => تحويلها لعُقَد صفحات */
+  const LEGACY_KEY = 'customPages';
+  function getLegacyPages(){
+    try{
+      const arr = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]');
+      return Array.isArray(arr) ? arr.map(p => ({
+        id:p.id, label:p.label||p.id, icon:p.icon||'•',
+        type:'page', file:p.file, children:[]
+      })) : [];
+    }catch{ return []; }
+  }
 
-            // Page URLs - Modify these according to your pages
-            const pageUrls = {
-                'home': 'page/home.html',
-                'jobs': 'pages/jobs.html',
-                'data': 'pages/data.html',
-                'reports': 'pages/reports.html',
-                'scripts': 'pages/scripts.html',
-                'settings': 'pages/settings.html',
-                'profile': 'pages/profile.html',
-                'help': 'pages/help.html'
-            };
+  /* شجرة موحّدة تجمع الهيراركي + القديم */
+  function getMergedTree(){
+    const tree = getCustomTree();
+    const legacy = getLegacyPages();
+    // لو في عناصر قديمة ولسه مفيش شجرة هيراركية — هاتها مؤقتًا
+    return tree.length ? tree : legacy;
+  }
 
-            // Update title
-            document.getElementById('pageTitle').textContent = pageTitles[page] || page;
+  /* هجرة تلقائية: لو فيه customPages ومفيش customMenuTree، انقلهم للشجرة واحذف القديم */
+  (function migrateLegacy(){
+    const tree = getCustomTree();
+    const legacy = getLegacyPages();
+    if(!tree.length && legacy.length){
+      setCustomTree(legacy);
+      try{ localStorage.removeItem(LEGACY_KEY); }catch{}
+    }
+  })();
+    function getCustomTree(){ try{ return JSON.parse(localStorage.getItem(TREE_KEY)||'[]'); }catch{ return []; } }
+    function setCustomTree(tree){ localStorage.setItem(TREE_KEY, JSON.stringify(tree||[])); }
 
-            // Load iframe
-            const iframe = document.getElementById('contentFrame');
-            const iframeContainer = document.getElementById('iframeContainer');
+    /* توليد الشريط الجانبي (يدعم Parent + Submenu) */
+    const tabs = document.getElementById('tabs');
 
-            iframe.onload = function() {
-                loading.classList.remove('active');
-                iframeContainer.style.display = 'block';
-            };
+    function pageBtn(n){
+      return `<button class="tab" data-route="#/${n.id}"><span class="ico">${n.icon||'•'}</span><span class="lbl">${n.label||n.id}</span></button>`;
+    }
+    function parentGroup(n){
+      const kids = (n.children||[]).map(c=> pageBtn(c)).join('');
+      return `<div class="group">
+        <button class="tab parent" type="button" data-group="${n.id}">
+          <span class="ico">${n.icon||'•'}</span>
+          <span class="lbl">${n.label||n.id}</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="submenu" data-of="${n.id}">${kids || '<div class="muted" style="padding:8px 10px">لا يوجد صفحات بعد</div>'}</div>
+      </div>`;
+    }
 
-            iframe.onerror = function() {
-                loading.classList.remove('active');
-                iframeContainer.innerHTML = `
-                    <div style="text-align: center; padding: 50px; color: #e74c3c;">
-                        <h2>⚠️ Loading Error</h2>
-                        <p>Page not found: ${pageUrls[page]}</p>
-                    </div>
-                `;
-                iframeContainer.style.display = 'block';
-            };
-
-            iframe.src = pageUrls[page];
-        }
-
-        // Mobile menu toggle
-        if (window.innerWidth <= 768) {
-            document.getElementById('toggleBtn').addEventListener('click', function() {
-                document.getElementById('sidebar').classList.toggle('active');
-            });
-        }
-
-        // Close sidebar when clicking outside (mobile)
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('toggleBtn');
-            
-            if (window.innerWidth <= 768 && 
-                !sidebar.contains(event.target) && 
-                !toggleBtn.contains(event.target)) {
-                sidebar.classList.remove('active');
-            }
+    function buildSidebar(){
+      // const roots = [...BASE_ROOT_ITEMS, ...getCustomTree()];
+      const roots = [...BASE_ROOT_ITEMS, ...getMergedTree()];
+      tabs.innerHTML = roots.map(n=> n.type==='parent' ? parentGroup(n) : pageBtn(n)).join('');
+      
+      // سلوك فتح/غلق الفرعي
+      tabs.querySelectorAll('.tab.parent').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const box = tabs.querySelector(`.submenu[data-of="${btn.dataset.group}"]`);
+          box && box.classList.toggle('open');
         });
-    </script>
+      });
+    }
+
+    /* الراوتر: تجميع كل الصفحات (فقط النوع Page) */
+    const viewer   = document.getElementById('viewer');
+    const statusEl = document.getElementById('status');
+    const pathEl   = document.getElementById('path');
+    const toggleBtn= document.getElementById('toggleBtn');
+
+    function toggleSidebar(){ document.body.classList.toggle('sidebar-collapsed'); }
+    toggleBtn.addEventListener('click', toggleSidebar);
+
+    // function getAllPages(){
+    //   const flat = [];
+    //   const walk = (n)=>{ if(n.type==='page') flat.push(n); (n.children||[]).forEach(walk); };
+    //   [...BASE_ROOT_ITEMS, ...getCustomTree()].forEach(walk);
+    //   return flat;
+    // }
+
+      function getAllPages() {
+        const flat = [];
+        const walk = (n) => { if (n.type === 'page') flat.push(n); (n.children || []).forEach(walk); };
+        [...BASE_ROOT_ITEMS, ...getMergedTree()].forEach(walk);
+        return flat;
+      }
+
+
+    function getRoutes(){
+      return Object.fromEntries(getAllPages().map(n => [ `#/${n.id}`, n.inline ? {type:'inline'} : { file:n.file } ]));
+    }
+
+    function setActiveTab(hash){
+      document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.route === hash));
+    }
+
+    function injectHideScrollbarCSS(){
+      try{
+        const doc = viewer.contentDocument || viewer.contentWindow.document;
+        if(!doc) return;
+        const style = doc.createElement('style');
+        style.textContent = `html,body{overflow:auto!important;scrollbar-width:none!important;-ms-overflow-style:none!important} ::-webkit-scrollbar{display:none!important;width:0;height:0}`;
+        doc.head && doc.head.appendChild(style);
+      }catch(e){ }
+    }
+
+    function inlineWelcome(){
+      const html = `<!DOCTYPE html><html lang="ar" dir="ltr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تعريف</title>
+        <style>html,body{margin:0;overflow:auto;scrollbar-width:none;-ms-overflow-style:none} ::-webkit-scrollbar{display:none;width:0;height:0} body{background:#0b1220;color:#e2e8f0;font:14px system-ui} .box{padding:24px} h2{margin:0 0 10px;color:#22c55e} p{color:#a0aec0}</style></head>
+        <body><div class="box"><h2>مرحبًا بك 👋</h2><p>هذه صفحة ترحيبية.
+        يمكنك إضافة Parents و Pages من صفحة الإعدادات لتظهر هنا فورًا.</p></div></body></html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      viewer.src = URL.createObjectURL(blob);
+    }
+
+    function navigate(hash){
+      const ROUTES = getRoutes();
+      const route = ROUTES[hash] || ROUTES['#/page2'] || ROUTES['#/home'];
+      pathEl && (pathEl.textContent = hash);
+      setActiveTab(hash);
+      statusEl && (statusEl.textContent = 'جاري التحميل…');
+
+      if(route?.type === 'inline'){
+        viewer.onload = () => { statusEl && (statusEl.textContent = 'جاهز'); injectHideScrollbarCSS(); };
+        inlineWelcome();
+        return;
+      }
+      viewer.onload = () => { statusEl && (statusEl.textContent = 'جاهز'); injectHideScrollbarCSS(); };
+      viewer.onerror = () => { statusEl && (statusEl.textContent = 'تعذّر التحميل'); };
+      viewer.src = route?.file || '';
+    }
+
+    // النقر على عناصر التبويب (تجاهل parent)
+    tabs.addEventListener('click', e => {
+      const btn = e.target.closest('.tab');
+      if(!btn || btn.classList.contains('parent')) return;
+      const hash = btn.dataset.route;
+      if(hash) location.hash = hash;
+    });
+
+    // // استقبال تحديثات فورية من settings.html
+    // window.addEventListener('message', (e)=>{
+    //   if(!e.data) return;
+    //   if(e.data.type==='MENU_TREE_UPDATED'){
+    //     setCustomTree(e.data.tree||[]);
+    //     buildSidebar();
+    //     setActiveTab(location.hash);
+    //   }
+    // });
+
+    window.addEventListener('message', (e)=>{
+  if(!e.data) return;
+
+  // النسخة الجديدة الهيراركية
+  if(e.data.type === 'MENU_TREE_UPDATED'){
+    setCustomTree(e.data.tree || []);
+    buildSidebar();
+    setActiveTab(location.hash);
+    return;
+  }
+
+  // دعم النسخة القديمة: NEW_PAGE_ADDED / PAGE_REMOVED
+  if(e.data.type === 'NEW_PAGE_ADDED' && e.data.page){
+    // أضف للّيجاسي ثم هاجر تلقائياً (الهجرة هتشغل buildSidebar بعد السطرين دول)
+    const saved = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]');
+    saved.push(e.data.page);
+    localStorage.setItem(LEGACY_KEY, JSON.stringify(saved));
+    // شغّل المهاجر وابقِِ التجربة سلسة
+    (function migrateAgain(){
+      const legacy = getLegacyPages();
+      if(legacy.length){
+        setCustomTree(legacy);
+        try{ localStorage.removeItem(LEGACY_KEY); }catch{}
+      }
+    })();
+    buildSidebar();
+    setActiveTab(location.hash);
+    return;
+  }
+
+  if(e.data.type === 'PAGE_REMOVED' && e.data.id){
+    // لو النسخة القديمة شغّالة
+    const saved = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]')
+      .filter(p => p.id !== e.data.id);
+    localStorage.setItem(LEGACY_KEY, JSON.stringify(saved));
+    // أعِد الهجرة
+    (function migrateAgain(){
+      const legacy = getLegacyPages();
+      setCustomTree(legacy);
+      try{ localStorage.removeItem(LEGACY_KEY); }catch{}
+    })();
+    buildSidebar();
+    setActiveTab(location.hash);
+    return;
+  }
+});
+
+
+
+
+
+    
+    // تشغيل أولي
+    buildSidebar();
+    window.addEventListener('hashchange', () => navigate(location.hash));
+    if(!location.hash) location.hash = '#/page2';
+    navigate(location.hash);
+  </script>
 </body>
 </html>
-
