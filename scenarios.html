@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>سيناريوهات فوايد البطاقة</title>
+  <link rel="stylesheet" href="./style.css" />
+  <style>
+    .wrap{max-width:900px}
+    table td small{color:#9ca3af}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>سيناريوهات الفائدة لو اتأخر سداد البطاقة</h1>
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>مبلغ السحب (SAR)</label>
+          <input id="drawAmt" type="number" value="15000" />
+        </div>
+        <div>
+          <label>تاريخ السحب</label>
+          <input id="drawDate" type="date" value="2025-11-08" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>يوم إصدار كشف الحساب</label>
+          <input id="stmtDay" type="number" min="1" max="28" value="7" />
+        </div>
+        <div>
+          <label>مدة السماح (يومًا)</label>
+          <input id="graceDays" type="number" value="53" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>رسوم بعد انتهاء السماح (SAR لكل 1000)</label>
+          <input id="feePerK" type="number" value="39" />
+        </div>
+        <div>
+          <label>طول الدورة (أيام) لحساب الفائدة</label>
+          <input id="cycleDays" type="number" value="30" />
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="calc">احسب السيناريوهات</button>
+        <a class="link" href="./index.html">الرجوع للوحة الرئيسية</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>نتائج</h3>
+      <div class="scroll">
+        <table id="tab">
+          <thead>
+            <tr>
+              <th>السيناريو</th>
+              <th>تاريخ الاستحقاق بدون فائدة</th>
+              <th>تاريخ/مبلغ السداد</th>
+              <th>عدد الدورات المحتسبة</th>
+              <th>الفائدة/الرسوم (SAR)</th>
+              <th>ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="note">المعادلة التقريبية: <code>ceil(المبلغ/1000) × الرسوم لكل 1000 × ceil(تأخير الأيام / طول الدورة)</code>. عدّل المدخلات وشغّل من جديد.</p>
+    </div>
+  </div>
+
+  <script>
+  const nf = (v) => new Intl.NumberFormat('ar-EG').format(Math.round(+v || 0));
+  function d(s){ return new Date(s); }
+  function addDays(d0,n){ const x=new Date(d0); x.setDate(x.getDate()+n); return x; }
+  function fmt(d){ return d.toLocaleDateString('ar-EG'); }
+
+  function cyclesCount(delayDays, cycleDays){ return Math.max(0, Math.ceil(delayDays / cycleDays)); }
+  function fees(amount, perK, cycles){ return Math.ceil(amount/1000) * perK * cycles; }
+
+  function compute(){
+    const drawAmt = parseFloat(document.getElementById('drawAmt').value)||0;
+    const drawDate = d(document.getElementById('drawDate').value);
+    const graceDays = parseInt(document.getElementById('graceDays').value)||53;
+    const perK = parseFloat(document.getElementById('feePerK').value)||39;
+    const cycleDays = parseInt(document.getElementById('cycleDays').value)||30;
+
+    const due = addDays(drawDate, graceDays); // تقريبًا
+    const tbody = document.querySelector('#tab tbody');
+
+    const scen = [];
+
+    // 1) سداد كامل قبل/في موعده
+    scen.push({
+      name:'سداد كامل في الموعد',
+      due: fmt(due),
+      pay: fmt(due) + ' — ' + nf(drawAmt) + ' ر.س',
+      cycles: 0,
+      fee: 0,
+      note: 'لا توجد فائدة'
+    });
+
+    // 2) تأخير 10 أيام بعد الموعد
+    const delay10 = addDays(due,10);
+    const c10 = cyclesCount(10, cycleDays);
+    scen.push({
+      name:'تأخير 10 أيام (سداد كامل)',
+      due: fmt(due),
+      pay: fmt(delay10) + ' — ' + nf(drawAmt) + ' ر.س',
+      cycles: c10,
+      fee: nf(fees(drawAmt, perK, c10)),
+      note: 'تُحتسب دورة/دورتان حسب طول الدورة'
+    });
+
+    // 3) سداد جزئي ثم الباقي
+    const part1 = Math.round(drawAmt*0.4);
+    const date1 = addDays(due,15);
+    const leftAfter1 = drawAmt - part1;
+    const c1 = cyclesCount(15, cycleDays);
+    const fee1 = fees(drawAmt, perK, c1);
+    const date2 = addDays(due,45);
+    const extraDays2 = 45;
+    const c2 = cyclesCount(extraDays2, cycleDays);
+    const fee2 = fees(leftAfter1, perK, c2);
+    scen.push({
+      name:'سداد 40% بعد 15 يوم + الباقي بعد 45 يوم',
+      due: fmt(due),
+      pay: `${fmt(date1)} — ${nf(part1)} ر.س ثم ${fmt(date2)} — ${nf(leftAfter1)} ر.س`,
+      cycles: `${c1} + ${c2}`,
+      fee: nf(fee1 + fee2),
+      note: 'فائدة أعلى لأن جزء من المبلغ استمر أكثر'
+    });
+
+    // 4) عدم السداد حتى الدورة التالية بالكامل (60 يوم تأخير)
+    const delay60 = addDays(due,60);
+    const c60 = cyclesCount(60, cycleDays);
+    scen.push({
+      name:'تأخير 60 يوم (سداد كامل)',
+      due: fmt(due),
+      pay: fmt(delay60) + ' — ' + nf(drawAmt) + ' ر.س',
+      cycles: c60,
+      fee: nf(fees(drawAmt, perK, c60)),
+      note: 'أسوأ حالة تقريبًا'
+    });
+
+    tbody.innerHTML = scen.map(s => `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.due}</td>
+        <td>${s.pay}</td>
+        <td>${s.cycles}</td>
+        <td><b>${s.fee}</b></td>
+        <td>${s.note}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('calc').addEventListener('click', compute);
+  compute();
+  </script>
+</body>
+</html>

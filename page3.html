@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-app="cash-planner" data-version="v3">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة تعقّب السيولة الشخصية</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1>لوحة تعقّب السيولة الشخصية — خطة عدم التعثّر</h1>
+
+    <div id="errorBanner" style="display:none;background:#581c1c;border:1px solid #7f1d1d;color:#fecaca;padding:10px;border-radius:10px;margin-bottom:10px"></div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>المدخلات</h3>
+
+        <div class="row">
+          <div>
+            <label>الراتب الشهري (SAR) — يقبض يوم 1 ميلادي</label>
+            <input id="salary" type="number" value="15000" />
+          </div>
+          <div>
+            <label>المصروف الشهري المتوقع (SAR)</label>
+            <input id="spend" type="number" value="4000" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>الرصيد الحالي (بعد قبض 1 أكتوبر + دفع جمعية 6000) — SAR</label>
+            <input id="currentBalance" type="number" value="8915" />
+          </div>
+          <div>
+            <label>رصيد احتياطي/طوارئ مطلوب إبقاؤه (SAR)</label>
+            <input id="emergency" type="number" value="5000" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>راتب أكتوبر يصل في 31/10 بدل 1 نوفمبر؟</label>
+            <select id="octSalaryEnd">
+              <option value="no">لا</option>
+              <option value="yes">نعم</option>
+            </select>
+          </div>
+          <div>
+            <label>أولوية تغطية المدفوعات</label>
+            <select id="priority">
+              <option value="sar-first">ريالات أولاً ثم دخل مصر</option>
+              <option value="egp-first">دخل مصر أولاً ثم ريالات</option>
+            </select>
+          </div>
+        </div>
+
+        <h4>الجمعية (ROSCA)</h4>
+        <div class="row">
+          <div>
+            <label>القسط الشهري (SAR)</label>
+            <input id="roscaPay" type="number" value="6000" />
+          </div>
+          <div>
+            <label>عدد الأفراد</label>
+            <input id="roscaN" type="number" value="5" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>تاريخ بداية الجمعية</label>
+            <input id="roscaStart" type="date" value="2025-10-01" />
+          </div>
+          <div>
+            <label>ترتيب قبضك (1=الأول)</label>
+            <input id="roscaOrder" type="number" value="3" />
+          </div>
+        </div>
+
+        <h4>السكن</h4>
+        <div class="row">
+          <div>
+            <label>تاريخ استحقاق الإيجار القادم</label>
+            <input id="rentDue" type="date" value="2025-12-01" />
+          </div>
+          <div>
+            <label>قيمة السنة (SAR)</label>
+            <input id="rentYear" type="number" value="22000" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>الدفع</label>
+            <select id="rentOption">
+              <option value="12">سنة كاملة</option>
+              <option value="6">ستة أشهر</option>
+            </select>
+          </div>
+          <div>
+            <label>تاريخ التحويل المرغوب للسكن</label>
+            <input id="rentTransfer" type="date" value="2025-12-05" />
+          </div>
+        </div>
+
+        <h4>التزامات مصر</h4>
+        <div class="row">
+          <div>
+            <label>سداد أكتروس المطلوب (EGP)</label>
+            <input id="truckEGP" type="number" value="700000" />
+          </div>
+          <div>
+            <label>موعد سداد الأكتروس (ميلادي)</label>
+            <input id="truckDue" type="date" value="2025-11-01" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>نافذة سماح (أيام) بعد الاستحقاق</label>
+            <input id="truckGraceDays" type="number" value="7" />
+          </div>
+          <div>
+            <label>سعر الصرف (EGP لكل 1 SAR)</label>
+            <input id="fx" type="number" step="0.01" value="14.50" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>دخل مصري شهري إضافي (EGP) — يبدأ من نوفمبر</label>
+            <input id="monthlyEGP" type="number" value="80000" />
+          </div>
+          <div>
+            <label>استخدام الدخل المصري شهريًا لدعم السيولة؟</label>
+            <select id="useEGP">
+              <option value="yes">نعم</option>
+              <option value="no">لا</option>
+            </select>
+          </div>
+        </div>
+
+        <h4>بطاقة ائتمانية</h4>
+        <div class="row">
+          <div>
+            <label>الحد الائتماني (SAR)</label>
+            <input id="ccLimit" type="number" value="45000" />
+          </div>
+          <div>
+            <label>يوم إصدار كشف الحساب شهريًا</label>
+            <input id="stmtDay" type="number" min="1" max="28" value="7" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>مدّة السماح (يومًا) بعد السحب</label>
+            <input id="grace" type="number" value="53" />
+          </div>
+          <div>
+            <label>رسوم/فائدة بعد انتهاء السماح (SAR لكل 1000)</label>
+            <input id="ccFeePerK" type="number" value="39" />
+          </div>
+        </div>
+
+        <div class="btns">
+          <button type="button" class="primary" id="calc">احسب الخطة</button>
+          <button type="button" id="reset">إرجاع الافتراضات</button>
+          <a class="link" href="./scenarios.html" target="_blank">فتح ملف السيناريوهات</a>
+        </div>
+        <div class="note">لو الأزرار لم تعمل، افتح أدوات المطوّر (F12) وشوف Console. الإصدار: <b>v3</b></div>
+      </div>
+
+      <div class="card">
+        <h3>ملخص سريع</h3>
+        <div class="summary">
+          <div class="pill">رصيد متوقع نهاية أكتوبر<b id="balOct">—</b></div>
+          <div class="pill">سداد أكتروس (بالريال) في نوفمبر<b id="truckPaySAR">—</b></div>
+          <div class="pill">سحب بطاقة مقترح في 8 نوفمبر<b id="ccDrawNov">—</b></div>
+        </div>
+        <div class="summary">
+          <div class="pill">قبض الجمعية 1 ديسمبر<b id="roscaIn">—</b></div>
+          <div class="pill">دفعة الإيجار 1 ديسمبر<b id="rentOut">—</b></div>
+          <div class="pill">تكلفة محتملة لو تأخر سداد البطاقة<b id="ccCost">—</b></div>
+        </div>
+        <div class="pill"><div id="advice" class="info"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>الجدول الزمني (أكتوبر 2025 → فبراير 2026)</h3>
+      <div class="scroll">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>الشهر</th>
+              <th>بداية الرصيد</th>
+              <th>الراتب</th>
+              <th>دخل مصري (SAR)</th>
+              <th>جمعية (-)</th>
+              <th>مصروف (-)</th>
+              <th>سداد أكتروس (-)</th>
+              <th>قبض الجمعية (+)</th>
+              <th>إيجار (-)</th>
+              <th>سحب بطاقة (+)</th>
+              <th>سداد بطاقة (-)</th>
+              <th>نهاية الرصيد</th>
+              <th>تحذير</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>رسوم توضيحية</h3>
+      <div class="tabs">
+        <button class="tab active" data-key="bal">رصيد النقد شهريًا</button>
+        <button class="tab" data-key="cc">سحوبات البطاقة</button>
+        <button class="tab" data-key="egp">الدعم المصري (SAR)</button>
+      </div>
+      <div id="pane-bal" class="pane active"><canvas id="chartBal" height="420"></canvas></div>
+      <div id="pane-cc" class="pane"><canvas id="chartCC" height="420"></canvas></div>
+      <div id="pane-egp" class="pane"><canvas id="chartEGP" height="420"></canvas></div>
+    </div>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
